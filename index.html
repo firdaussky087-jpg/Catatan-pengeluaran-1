@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Catatan Pengeluaran</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f6f4;--sf:#fff;--tx:#14231c;--mu:#62736a;--ac:#0f6b4f;--ac2:#e8f2ee;--bd:#dbe4df;--rd:#c0392b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1713;--sf:#18231d;--tx:#e6efe9;--mu:#8da197;--ac:#4fc79a;--ac2:#1e3329;--bd:#27382f;--rd:#ff7b6b}}
+:root[data-theme="dark"]{--bg:#0f1713;--sf:#18231d;--tx:#e6efe9;--mu:#8da197;--ac:#4fc79a;--ac2:#1e3329;--bd:#27382f;--rd:#ff7b6b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:400 15px/1.5 Figtree,system-ui,sans-serif}
+main{max-width:560px;margin:0 auto;padding:20px 16px 48px}
+h1,h2{font-family:'Bricolage Grotesque',Figtree,sans-serif;margin:0}
+.top{display:flex;justify-content:space-between;align-items:end;margin-bottom:14px}
+.top h1{font-size:22px}
+select,input{font:inherit;color:var(--tx);background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;width:100%}
+select:focus-visible,input:focus-visible,button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.top select{width:auto}
+.total{background:var(--ac);color:#fff;border-radius:18px;padding:22px 20px;margin-bottom:14px}
+:root[data-theme="dark"] .total,:root:not([data-theme="light"]) .total{color:#06241a}
+.total small{opacity:.85}
+.total .big{font:700 36px/1.1 'Bricolage Grotesque',sans-serif;margin:4px 0 10px}
+.bar{display:flex;height:10px;border-radius:6px;overflow:hidden;background:rgba(255,255,255,.25)}
+.bar i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:13px}
+.legend span:before{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--c);margin-right:6px}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:14px}
+.card h2{font-size:17px;margin-bottom:12px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+label{display:block;font-size:13px;color:var(--mu);margin-bottom:4px}
+button{font:600 15px Figtree,sans-serif;border:0;border-radius:10px;padding:12px;cursor:pointer;background:var(--ac);color:#fff;width:100%}
+:root[data-theme="dark"] button.p,:root:not([data-theme="light"]) button.p{color:#06241a}
+button.x{background:none;color:var(--mu);width:auto;padding:4px 8px;font-size:18px}
+button.x:hover{color:var(--rd)}
+.item{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--bd)}
+.item:first-of-type{border-top:0}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none}
+.item .t{flex:1;min-width:0}
+.item .t b{display:block;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .t span{color:var(--mu);font-size:13px}
+.amt{font-weight:600;white-space:nowrap}
+.empty{color:var(--mu);text-align:center;padding:18px 0}
+.err{color:var(--rd);font-size:13px;min-height:18px;margin:6px 0 0}
+.tools{display:flex;gap:10px}
+.tools button{background:var(--ac2);color:var(--ac)}
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <h1>Catatan Pengeluaran</h1>
+    <select id="bulan" aria-label="Pilih bulan"></select>
+  </div>
+
+  <section class="total" aria-live="polite">
+    <small id="lbl">Total bulan ini</small>
+    <div class="big" id="total">Rp0</div>
+    <div class="bar" id="bar"></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section class="card">
+    <h2>Catat pengeluaran</h2>
+    <div class="row2">
+      <div><label for="jml">Jumlah (Rp)</label><input id="jml" inputmode="numeric" placeholder="25000"></div>
+      <div><label for="tgl">Tanggal</label><input id="tgl" type="date"></div>
+    </div>
+    <div class="row2">
+      <div><label for="kat">Kategori</label><select id="kat"></select></div>
+      <div><label for="ket">Keterangan</label><input id="ket" placeholder="Makan siang"></div>
+    </div>
+    <button class="p" id="simpan">Simpan pengeluaran</button>
+    <p class="err" id="err"></p>
+  </section>
+
+  <section class="card">
+    <h2>Riwayat</h2>
+    <div id="list"></div>
+  </section>
+
+  <div class="tools">
+    <button id="csv">Unduh CSV</button>
+    <button id="hapus">Hapus semua data</button>
+  </div>
+</main>
+<script>
+var KAT={"Makanan":"#e07a3a","Transportasi":"#3b82c4","Belanja":"#b45fb0","Tagihan":"#d4a017","Hiburan":"#d9558b","Kesehatan":"#2fa37a","Lainnya":"#7f8c8d"};
+var BLN=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+var data=[];
+var $=function(i){return document.getElementById(i)};
+function load(){try{data=JSON.parse(localStorage.getItem("pengeluaran")||"[]")}catch(e){data=[]}}
+function save(){try{localStorage.setItem("pengeluaran",JSON.stringify(data))}catch(e){}}
+function rp(n){return "Rp"+Math.round(n).toLocaleString("id-ID")}
+function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function months(){var s={};s[today().slice(0,7)]=1;data.forEach(function(x){s[x.tgl.slice(0,7)]=1});return Object.keys(s).sort().reverse()}
+function fillMonths(keep){
+  var sel=$("bulan"),cur=keep||sel.value||today().slice(0,7);sel.innerHTML="";
+  months().forEach(function(m){var o=document.createElement("option");o.value=m;o.textContent=BLN[+m.slice(5)-1]+" "+m.slice(0,4);sel.appendChild(o)});
+  sel.value=cur;
+}
+function render(){
+  var m=$("bulan").value,items=data.filter(function(x){return x.tgl.slice(0,7)===m}).sort(function(a,b){return b.tgl.localeCompare(a.tgl)||b.id-a.id});
+  var tot=0,per={};items.forEach(function(x){tot+=x.jml;per[x.kat]=(per[x.kat]||0)+x.jml});
+  $("total").textContent=rp(tot);
+  $("lbl").textContent="Total "+$("bulan").selectedOptions[0].textContent;
+  var bar=$("bar"),lg=$("legend");bar.innerHTML="";lg.innerHTML="";
+  Object.keys(per).sort(function(a,b){return per[b]-per[a]}).forEach(function(k){
+    var i=document.createElement("i");i.style.width=(per[k]/tot*100)+"%";i.style.background=KAT[k];bar.appendChild(i);
+    var s=document.createElement("span");s.style.setProperty("--c",KAT[k]);s.textContent=k+" "+rp(per[k]);lg.appendChild(s);
+  });
+  var L=$("list");L.innerHTML="";
+  if(!items.length){L.innerHTML='<div class="empty">Belum ada pengeluaran bulan ini. Catat yang pertama di atas.</div>';return}
+  items.forEach(function(x){
+    var d=document.createElement("div");d.className="item";
+    var dt=x.tgl.slice(8)+" "+BLN[+x.tgl.slice(5,7)-1].slice(0,3);
+    d.innerHTML='<span class="dot" style="--c:'+KAT[x.kat]+'"></span><div class="t"><b></b><span></span></div><span class="amt"></span><button class="x" aria-label="Hapus">×</button>';
+    d.querySelector("b").textContent=x.ket||x.kat;
+    d.querySelector(".t span").textContent=x.kat+" · "+dt;
+    d.querySelector(".amt").textContent=rp(x.jml);
+    d.querySelector(".x").onclick=function(){data=data.filter(function(y){return y.id!==x.id});save();fillMonths();render()};
+    L.appendChild(d);
+  });
+}
+Object.keys(KAT).forEach(function(k){var o=document.createElement("option");o.textContent=k;$("kat").appendChild(o)});
+$("tgl").value=today();
+$("simpan").onclick=function(){
+  var j=parseInt(($("jml").value||"").replace(/\D/g,""),10),t=$("tgl").value;
+  if(!j||j<=0){$("err").textContent="Isi jumlah pengeluaran dengan angka lebih dari 0.";return}
+  if(!t){$("err").textContent="Pilih tanggal pengeluaran.";return}
+  $("err").textContent="";
+  data.push({id:Date.now(),jml:j,tgl:t,kat:$("kat").value,ket:$("ket").value.trim()});
+  save();$("jml").value="";$("ket").value="";
+  fillMonths(t.slice(0,7));render();
+};
+$("bulan").onchange=render;
+$("csv").onclick=function(){
+  if(!data.length){$("err").textContent="Belum ada data untuk diunduh.";return}
+  var r=["Tanggal,Kategori,Keterangan,Jumlah"].concat(data.map(function(x){return [x.tgl,x.kat,'"'+(x.ket||"").replace(/"/g,'""')+'"',x.jml].join(",")}));
+  var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([r.join("\n")],{type:"text/csv"}));a.download="pengeluaran.csv";a.click();
+};
+$("hapus").onclick=function(){
+  if(!data.length)return;
+  if(confirm("Hapus semua data pengeluaran? Tindakan ini tidak bisa dibatalkan.")){data=[];save();fillMonths();render()}
+};
+load();fillMonths();render();
+</script>
+</body>
+</html>
